@@ -26,13 +26,25 @@ parser.add_argument(
     default='.',
     help='name for source folder',
 )
-
-HOST = "127.0.0.1"
-PORT = 38344
+parser.add_argument(
+    '--server',
+    type=str,
+    default='127.0.0.1',
+    help='server IP address',
+)
+parser.add_argument(
+    '--port',
+    type=int,
+    default=38344,
+    help='server port',
+)
 
 args = vars(parser.parse_args())
 print("SYNC {}".format(args['source_dir']))
 source = args['source_dir']
+HOST = args['server']
+PORT = args['port']
+
 
 def cmd_init(client, source):
     print("exec init")
@@ -40,10 +52,12 @@ def cmd_init(client, source):
     content = json.dumps(filehash)
     send_chunk(client, content)
 
+
 def cmd_update(client, source):
     print("exec update")
     filename = recv_chunk(client)
     recv_file(client, os.path.join(source, filename.decode("utf-8")))
+
 
 table = {b"INIT": cmd_init,
          b"UPDATE": cmd_update}
