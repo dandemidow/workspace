@@ -4,6 +4,7 @@ import struct
 import json
 
 import argparse
+import time
 
 from server import walk_dir, send_chunk, recv_chunk
 
@@ -62,10 +63,18 @@ def cmd_update(client, source):
 table = {b"INIT": cmd_init,
          b"UPDATE": cmd_update}
 
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
-    client.connect((HOST, PORT))
-    while True:
-        cmd = recv_chunk(client)
-        print("receive {} command".format(cmd))
-        if cmd in table.keys():
-            table[cmd](client, source)
+while True:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
+        try:
+            client.connect((HOST, PORT))
+            while True:
+                cmd = recv_chunk(client)
+                if len(cmd) == 0:
+                    client.close()
+                    break
+                print("receive {} command".format(cmd))
+                if cmd in table.keys():
+                    table[cmd](client, source)
+        except socket.error as exc:
+            print("Exception {}".format(exc))
+            time.sleep(10)

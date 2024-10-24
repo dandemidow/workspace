@@ -9,6 +9,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import queue
 
+
 def md5(file_path):
     hasher = hashlib.md5()
     with open(file_path, 'rb') as file:
@@ -39,11 +40,13 @@ def recv_chunk(conn):
     data = conn.recv(4)
     if len(data) == 0:
         print("close connection")
-    size = struct.unpack('<i', data)[0]
-    if size > 512:
-        raise Exception
-    data = conn.recv(size)
+    else:
+        size = struct.unpack('<i', data)[0]
+        if size > 512:
+            raise Exception
+        data = conn.recv(size)
     return data
+
 
 def walk_dir(folder: str):
     filehash = {}
@@ -54,7 +57,7 @@ def walk_dir(folder: str):
             f = os.path.join(address, file)
             rel = os.path.relpath(f, folder)
             print("--- {}".format(rel))
-            crc = md5(rel)
+            crc = md5(f)
             filehash[rel] = crc
     return filehash
 
@@ -120,13 +123,16 @@ if __name__ == "__main__":
                 if file in current.keys():
                     print("file {} - {}".format(file, filehash[file]))
                     print("file {} - {}".format(file, current[file]))
-                    is_need_update = filehash[file] == current[file]
+                    is_need_update = filehash[file] != current[file]
                 else:
                     is_need_update = True
                 if is_need_update:
                     send_chunk(conn, "UPDATE")
                     send_chunk(conn, file)
                     send_file(conn, source, file)
+
+            with queue.mutex:
+                queue.queue.clear()
 
             while True:
                 time.sleep(1)
